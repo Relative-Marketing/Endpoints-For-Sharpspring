@@ -48,7 +48,7 @@ function init_endpoint() {
 					}
 				],
 			],
-		],
+		]
 	);
 }
 
