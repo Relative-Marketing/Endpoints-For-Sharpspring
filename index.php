@@ -47,9 +47,8 @@ function init_endpoint() {
 						return is_email( $param );
 					}
 				],
-			]
-		] 
-
+			],
+		],
 	);
 }
 
