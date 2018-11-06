@@ -70,8 +70,15 @@ function init_endpoint() {
 	);
 }
 
-function update_lead_tracking() {
-	die('works');
+function update_lead_tracking( $params ) {
+	// Setup the data for the request
+	$data = [
+		'emailAddress' => $params['email'],
+		'trackingID' => get_sharpspring_tracking_id(),
+	];
+
+	$request = new Sharpspring_Request( 'updateLeadsV2', $data );
+	return rest_ensure_response( $request->make_request() );
 }
 
 /**
@@ -88,7 +95,7 @@ function handle_newsletter_subscribe( $params ) {
 
 	// If we have sharsprings(ss) tracking cookie then make sure it is attached
 	// to the lead when the lead is created
-	$tracking_id = array_key_exists( '__ss_tk', $_COOKIE ) ? $_COOKIE['__ss_tk'] : '';
+	$tracking_id = get_sharpspring_tracking_id();
 	$campaign_id = $params['campaignId'];
 
 	// Format the params according to ss api requirements
@@ -123,6 +130,13 @@ function validate_name_string( $name ) {
 	 * Everything must match from the start and end to be true
 	 */
 	return (bool) preg_match( "/^[a-zA-Z- ]+$/", urldecode( $name ) );
+}
+
+/**
+ * Get the users sharpspring tracking id
+ */
+function get_sharpspring_tracking_id() {
+	return array_key_exists( '__ss_tk', $_COOKIE ) ? $_COOKIE['__ss_tk'] : '';
 }
 
 /**
