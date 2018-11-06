@@ -20,6 +20,8 @@ namespace RelativeMarketing\EndpointsForSharpspring;
 
 defined('ABSPATH') or die();
 
+include 'inc/class-sharpspring-request.php';
+
 /**
  * Registers a new endpoint to allow us to connect to sharsprings
  * serverside and keep our secret key secret
@@ -47,10 +49,29 @@ function init_endpoint() {
 						return is_email( $param );
 					}
 				],
-			]
-		] 
-
+			],
+		]
 	);
+
+	register_rest_route(
+		'relativemarketing/sharpspring/v1',
+		'/updateLeadTracking/',
+		[
+			'methods' => 'POST',
+			'callback' => __NAMESPACE__ . '\\update_lead_tracking',
+			'args' => [
+				'email' => [
+					'validate_callback' => function( $param ) {
+						return is_email( $param );
+					}
+				],
+			],
+		]
+	);
+}
+
+function update_lead_tracking() {
+	die('works');
 }
 
 /**
@@ -63,24 +84,15 @@ function handle_newsletter_subscribe( $params ) {
 	$last_name  = $split_name[ count( $split_name ) - 1 ];
 	$email      = $params->get_param('email');
 
-	// Data for the request
-	$account_id  = get_option( 'endpoints_for_sharpspring_api_key' );
-	$secret_key  = get_option( 'endpoints_for_sharpspring_secret_key' );
-
-	if ( empty($secret_key) || empty($account_id) ) {
-		return new \WP_Error('Either account ID or Secret Key is not set');
-	}
-
-	$request_id  = session_id();
 	$method      = 'createLeads';
-	
+
 	// If we have sharsprings(ss) tracking cookie then make sure it is attached
 	// to the lead when the lead is created
 	$tracking_id = array_key_exists( '__ss_tk', $_COOKIE ) ? $_COOKIE['__ss_tk'] : '';
 	$campaign_id = $params['campaignId'];
 
 	// Format the params according to ss api requirements
-	$paramData = [ 
+	$data = [ 
 		"objects" => [
 			[
 				"firstName"     => $first_name,
@@ -92,29 +104,9 @@ function handle_newsletter_subscribe( $params ) {
 		]
 	];
 
-	$data = json_encode( [
-		'method' => $method,
-		'params' => $paramData,
-		'id'     => $request_id,
-	] );
+	$request = new Sharpspring_Request( $method, $data );
 
-	$query_string = http_build_query( ['accountID' => $account_id, 'secretKey' => $secret_key] );
-	$url = "https://api.sharpspring.com/pubapi/v1/?$query_string";
-
-	$ch = curl_init( $url );
-
-	curl_setopt( $ch, CURLOPT_CUSTOMREQUEST, "POST" );
-	curl_setopt( $ch, CURLOPT_POSTFIELDS, $data );
-	curl_setopt( $ch, CURLOPT_RETURNTRANSFER, true );
-	curl_setopt( $ch, CURLOPT_HTTPHEADER, [
-		'Content-Type: application/json',
-		'Content-Length: ' . strlen( $data )
-	] );
-
-	$result = curl_exec( $ch );
-	curl_close( $ch );
-
-	return json_decode( $result  );
+	return rest_ensure_response( $request->make_request() );
 
 }
 
